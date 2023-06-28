@@ -50,10 +50,10 @@ class KalmanFilter():
         return self._P
     @property
     def w(self):
-        return self._w.u
+        return self._w.y
     @property 
     def v(self):
-        return self._v.u
+        return self._v.y
     def init(self,x):
         self._x = x
         self._k = 0

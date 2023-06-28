@@ -50,6 +50,8 @@ class Timer():
         self._t = 0.0
     def init(self):
         self._t = 0.0
+    def copy(self):
+        return Timer(self.stop,self.step,self.mode)
     @property
     def done(self):
         return self._t>=self.stop

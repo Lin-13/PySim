@@ -39,6 +39,15 @@ class DynamicSystem(BaseBlock):
         self.timer.init()
         for t in self.timer:
             yield self.update_self()
+    def simulate(self,draw = True):
+        h = []
+        for y in self:
+            h.append([self.t,y.item()])
+        h = np.array(h)
+        if draw:
+            plt.plot(h[:,0],h[:,1])
+            plt.show()
+        return (h.copy())
     @property
     def x(self):
         return self._x
