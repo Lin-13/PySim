@@ -3,61 +3,78 @@ import matplotlib.pyplot as plt
 from .base import InputWarpper,BaseBlock,Timer
 import random
 
-class DynamicSystem():
+class DynamicSystem(BaseBlock):
     '''
     x_dot = A * x + B * u
     y = C * x + D * u
     '''
     
-    def __init__(self,A,B,C,D,Ts = 0.001,t_stop = 10,x = None,u = None):
+    def __init__(self,A,B,C,D,timer = Timer(),x = None,u = None):
         self._A = A
         self._B = B
         self._C = C
         self._D = D
-        self.x = x
-        self.Ts = Ts
+        self._x = x
+        self.timer = timer
         self._u = InputWarpper(u)
-        # for iter
-        self.t = 0
-        self.t_stop = t_stop
     @staticmethod
-    def from_system(system,Ts = 0.001,t_stop = 10,x = None,u = None):
-        return DynamicSystem(system.A,system.B,system.C,system.D,Ts,t_stop,x,u)
+    def from_system(system,timer = Timer(),x = None,u = None):
+        return DynamicSystem(system.A,system.B,system.C,system.D,timer,x,u)
     @property
     def u(self):
         # print("U")
-        return self._u.u
+        # return self._u.u
+        return np.array(np.array(self._u.y)).reshape((-1,1))
     @u.setter
     def u(self,u):
         self.set_u(u)
     def init(self,x):
-        self.x = x
-        self.t = 0
+        self._x = x
+        self.timer.init()
     def __iter__(self):
-        while True:
-            yield self.update(self.u)
-            if self.t>=self.t_stop:
-                break
+        # while True:
+        #     yield self.update(self.u)
+        #     if self.t>=self.t_stop:
+        #         break
+        self.timer.init()
+        for t in self.timer:
+            yield self.update_self()
+    @property
+    def x(self):
+        return self._x
+    @property
+    def t(self):
+        return self.timer._t
+    @property
+    def Ts(self):
+        return self.timer.step
+    @property
+    def y(self):
+        return self._C@self.x + self._D@self.u
     def update(self,u):
         try:
-            u = u.__getattribute__("u")
+            u = u.__getattribute__("y")
         except AttributeError:
             pass
-        # if u == None and self.u ==None:
-        #     raise SyntaxError("PLease set or input u!")
+        self.u = u
+        return self.update_self()
+    # update using self.u
+    def update_self(self):
         # https://zhuanlan.zhihu.com/p/326930724
         #Rank 1:
         # x_dot = self._A@self.x + self._B*u
         # self.x+=x_dot*self.Ts
         #Rank 2:
+        # u = np.array(u).reshape((-1,1))
         phi = (np.eye(*self._A.shape)+self._A*self.Ts+1/2*self._A@self._A*self.Ts**2)
-        self.x = phi@self.x + self._B*u*self.Ts
+        self._x = phi@self.x + self._B@self.u*self.Ts
         # Or
         # self.x = phi@self.x + 1/2*(1+phi)@self._B*u*self.Ts
-        self.t+=self.Ts
-        return self._C@self.x + self._D*u
+        # self.timer.update()
+        # self.u #update u
+        return self._C@self.x + self._D@self.u
     def set_t_stop(self,t):
-        self.t_stop = t
+        self.timer.stop = t
         return self
     def set_u(self,u):
         self._u = InputWarpper(u)
@@ -84,6 +101,8 @@ class DiscreteDynamicSystem():
         self._k = 0
         self.k_stop = 100
         self.u = None
+    def init(self,x):
+        self._x = x
     def update (self,uk):
         self._x = self._A@self._x + uk
         zk = self._C@self._x
@@ -95,22 +114,23 @@ class DiscreteDynamicSystem():
             if self._k>=self.k_stop:
                 break
         
-class TimeVariable():
+class Variable():
     '''
     function warpper for varible
         y = fn(t,*fcn_args,**kwards)
     you can get y = varible.u if need
+    you should use update() while you want to get a new value 
     Sample:
-        u = TimeVariable(fn=TimeVariable.random,fcn_args = (1,2))
+        u = Variable(fn=Variable.random,fcn_args = (1,2))
     Or define a function:
         def fcn(t,a,b):
             return a*t+b
     then
-        u = variable(0,1,fn=fcn,a=1,b=2)
+        u = Variable(0,1,fn=fcn,a=1,b=2)
     or:
-        u = variable(0,1,fn=fcn,fcn_args = [1,2])
+        u = Variable(0,1,fn=fcn,fcn_args = [1,2])
     '''
-    def __init__(self,t=0,step=0.01,stop = 10,fn = None,**kwards) -> None:
+    def __init__(self,t=0.0,step=0.01,stop = 10,fn = None,**kwards) -> None:
         self.t = t
         self.step = step
         self.stop = stop
@@ -121,19 +141,24 @@ class TimeVariable():
             self.fcn_args = kwards["fcn_args"]
         except KeyError:
             self.fcn_kwards = kwards
+    def init(self):
+        self.set_t(0)
     def set_t(self,t):
         self.t = t
     def __iter__(self):
         self.set_t(0)
         while True:
-            yield self.u
+            yield self.y
+            self.update()
             if self.t>self.stop:
                 break
     @staticmethod
     def random(t,*args,**kwards):
         return np.random.randn(*args)
+    def update(self):
+        self.set_t(self.t+self.step)
     @property
-    def u(self):
+    def y(self):
         ret = self.t
         if self.fcn ==None:
             return  self.t
@@ -141,9 +166,37 @@ class TimeVariable():
             ret =  self.fcn(self.t,*self.fcn_args,**self.fcn_kwards)
         else:
             ret =  self.fcn(self.t,**self.fcn_kwards)
-        self.set_t(self.t+self.step)
+        self.update()
         return ret
-class WhiteNoise(TimeVariable):
+class TimerVariable(Variable):
+    '''
+    Variable with Timer
+    When you get y,it does not update,
+    you should update() it
+    '''
+    def __init__(self,timer = Timer(),fn = None,**kwards):
+        self.timer = timer
+        super().__init__(timer.t,timer.step,timer.stop,fn,**kwards)
+    def update(self):
+        self.timer.update()
+    # do not update by itself
+    @property
+    def t(self):
+        return self.timer.t
+    @t.setter
+    def t(self,t):
+        self.timer._t = t
+    @property
+    def y(self):
+        ret = self.t
+        if self.fcn ==None:
+            return  self.t
+        if self.fcn_args is not None:
+            ret =  self.fcn(self.t,*self.fcn_args,**self.fcn_kwards)
+        else:
+            ret =  self.fcn(self.t,**self.fcn_kwards)
+        return ret
+class WhiteNoise(Variable):
     '''
         return randn noise with ndarray.
         N:length of White Noise ,used to iter
@@ -156,10 +209,10 @@ class WhiteNoise(TimeVariable):
     def __iter__(self):
         self.set_t(0)
         while True:
-            yield self.u
+            yield self.y
             if self.t>self.stop:
                 break
     @property
-    def u(self):
+    def y(self):
         # return TimeVariable.random(0,*self.shape)*self.sigma+self.mu
-        return super().u*self.sigma+self.mu
+        return super().y*self.sigma+self.mu

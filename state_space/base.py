@@ -3,14 +3,14 @@ class InputWarpper():
     def __init__(self,u) -> None:
         self._u = u
         try:
-            u.__getattribute__("u")
+            u.__getattribute__("y")
             self._has_warp = True
         except AttributeError:
             self._has_warp = False
     @property
-    def u(self):
+    def y(self):
         if self._has_warp:
-            return self._u.u
+            return self._u.y
         else:
             return self._u
 class BaseBlock():
@@ -47,9 +47,13 @@ class Timer():
         self.step = step
         self.stop = stop
         self.mode = mode
-        self._t = 0
+        self._t = 0.0
     def init(self):
-        self._t = 0
+        self._t = 0.0
+    @property
+    def done(self):
+        return self._t>=self.stop
+    @property
     def t(self):
         if self.mode == "mode":
             self.update()
@@ -61,7 +65,7 @@ class Timer():
             if t>=self.stop:
                 # raise StopIteration
                 break
-            yield t            
+            yield t
     def update(self):
         if self._t<=self.stop:
             self._t+=self.step
