@@ -17,6 +17,8 @@ class DynamicSystem(BaseBlock):
         self._x = x
         self.timer = timer
         self._u = InputWarpper(u)
+        #Save state of u
+        self.u_temp = None
     @staticmethod
     def from_system(system,timer = Timer(),x = None,u = None):
         return DynamicSystem(system.A,system.B,system.C,system.D,timer,x,u)
@@ -24,10 +26,13 @@ class DynamicSystem(BaseBlock):
     def u(self):
         # print("U")
         # return self._u.u
+        #Update once u update.Capture state of u
+        self.u_temp = np.array(np.array(self._u.y)).reshape((-1,1))
         return np.array(np.array(self._u.y)).reshape((-1,1))
     @u.setter
     def u(self,u):
         self.set_u(u)
+        self.u #update self.u_temp
     def init(self,x):
         self._x = x
         self.timer.init()
@@ -59,7 +64,7 @@ class DynamicSystem(BaseBlock):
         return self.timer.step
     @property
     def y(self):
-        return self._C@self.x + self._D@self.u
+        return self._C@self.x + self._D@self.u_temp
     def update(self,u):
         try:
             u = u.__getattribute__("y")

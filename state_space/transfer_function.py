@@ -84,6 +84,7 @@ class Transfer(DynamicSystem):
         return self._den
     @property
     def u(self):
+        self.u_temp = np.concatenate((np.array([[self._u_0.y]]).reshape((-1,1)),self._du))
         return np.concatenate((np.array([[self._u_0.y]]).reshape((-1,1)),self._du))
     # @u.setter in DynamicSystem
     def set_u(self,u):
@@ -94,6 +95,7 @@ class Transfer(DynamicSystem):
     @u.setter
     def u(self,u):
         self.set_u(u)
+        self.u #update self.__u
     # @property
     # def y(self):
     #     return self._C@self.x + self._D@self.u

@@ -2,6 +2,7 @@ from .base import InputWarpper,Timer,BaseBlock
 from .simulator import TimerVariable,Variable,DynamicSystem,DiscreteDynamicSystem
 from .pid_controller import PIDController
 from .transfer_function import Transfer
+import numpy as np
 class Concat(BaseBlock):
     '''
     Concat SUM of systems,like:\n
@@ -16,9 +17,14 @@ class Concat(BaseBlock):
     '''
     def __init__(self,system:list,sign = None):
         assert(isinstance(system,list))
+        #Check whether system has system.y 
         for i in system:
-            if not isinstance(i,BaseBlock):
-                raise TypeError("System must be subclass of BaseBlock")
+            try:
+                i.__getattribute__("y")
+            except:
+                raise AttributeError("Concat system must has arrtibute y")
+            # if not isinstance(i,BaseBlock):
+            #     raise TypeError("System must be subclass of BaseBlock")
         self.system = system
         if not (isinstance(sign,tuple) or isinstance(sign,list)):
             if not isinstance(sign,int):
@@ -39,7 +45,7 @@ class Concat(BaseBlock):
         return sum
     @property
     def y(self):
-        return self.u
+        return np.array(self.u)
     def update(self,u=None):
         return self.y
 class SystemMap(BaseBlock):
