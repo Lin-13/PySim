@@ -55,27 +55,36 @@ class Transfer(DynamicSystem):
         matrix = get_state_matrix(num,den)
         #x is X of state space 
         x_ = np.zeros((len(den)-1,1))
+        self.init_state = y
         if not isinstance(y,np.ndarray):
             x_[0,0] = y
             x = x_
         else:
             x = y
-        super().__init__(*matrix,timer,x,u)
-        # self.timer = timer# if isinstance(timer,Timer) else Timer(timer)
-        # self._x = x
+
         self._last_u = 0
         if u is None:
             self._u_0 = InputWarpper(0)
         else:
             self._u_0 = InputWarpper(u)
         self._du = np.zeros((len(self._num)-1,1))
+        
+        super().__init__(*matrix,timer,x,u)
+        
         self._y = x
     def init(self,x):
+        self.init_state = x
+        x_ = np.zeros((len(self._den)-1,1))
+        if not isinstance(x,np.ndarray):
+            x_[0,0] = x
+            x = x_
         self._x = x
         self.timer.init()
     # def __iter__(self):
     #     for t in self.timer:
     #         yield t
+    def reset(self):
+        self.init(self.init_state)
     @property
     def num(self):
         return self._num
@@ -91,6 +100,7 @@ class Transfer(DynamicSystem):
         if isinstance(u,np.ndarray):
             u = u[0]
         self._u_0 = InputWarpper(u)
+        self._u = self._u_0
         self._du = np.zeros((len(self._num)-1,1))
     @u.setter
     def u(self,u):
@@ -99,10 +109,12 @@ class Transfer(DynamicSystem):
     # @property
     # def y(self):
     #     return self._C@self.x + self._D@self.u
-    def update(self, u):
-        if self.t <self.Ts:
+    def update(self, u = None):
+        if u is not None:
             self.u = u
-        super().update(self.u[0,0])
+        #fix:super().update(self,u[0])
+        # super().update(self,u[0])
+        super().update()
         return self.y
 def conv(a,b):
     assert(isinstance(a,tuple) and isinstance(b,tuple))
@@ -114,6 +126,31 @@ def conv(a,b):
             c[i+j] += a[i]*b[j]
     return tuple(c)
 
+class Gain(BaseBlock):
+    '''
+        you can use gain to connect any system based on BaseBlock\n
+        or it has attribute "y"\n
+        Warning:it does not save state of u like Transfer or Dynamic\n
+        it run like self.y = self.k * self.u
+    '''
+    def __init__(self,K,u=None):
+        self.K = K
+        self._u = InputWarpper(0) if u is None else InputWarpper(u)
+    def init(self):
+        pass
+    @property
+    def u(self):
+        return self._u.y
+    @u.setter
+    def u(self,u):
+        self.set_u(u)
+    def set_u(self,u):
+        self._u = InputWarpper(u)
+    @property
+    def y(self):
+        return self.K*self.u
+    def update(self,u = None):
+        pass
 def add(a,b):
     assert(isinstance(a,tuple) and isinstance(b,tuple))
     if len(a) > len(b):

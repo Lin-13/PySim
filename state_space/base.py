@@ -34,30 +34,35 @@ class BaseBlock():
     @property
     def y(self):
         pass
-    def update(self,x):
+    def update(self,x = None):
+        pass
+    # reset system state for last init() state
+    def reset(self):
         pass
 class Timer():
     '''
     Step time
     step: time step
     stop:time stop
-    if mode = auto,update t while get t by property
+    if auto = true,update t once get t by property
     '''
-    def __init__(self,stop = 10,step = 0.01,mode = "auto") -> None:
+    def __init__(self,stop = 10,step = 0.01,auto = False) -> None:
         self.step = step
         self.stop = stop
-        self.mode = mode
+        self.auto = auto
         self._t = 0.0
     def init(self):
         self._t = 0.0
+    def reset(self):
+        self.init()
     def copy(self):
-        return Timer(self.stop,self.step,self.mode)
+        return Timer(self.stop,self.step,self.auto)
     @property
     def done(self):
         return self._t>=self.stop
     @property
     def t(self):
-        if self.mode == "mode":
+        if self.auto:
             self.update()
         return self._t
     def __iter__(self):

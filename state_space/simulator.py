@@ -17,8 +17,10 @@ class DynamicSystem(BaseBlock):
         self._x = x
         self.timer = timer
         self._u = InputWarpper(u)
-        #Save state of u
-        self.u_temp = None
+        self.init_state = x
+        #Save state of u,used to self.y
+        #Once self.u is get ,update it
+        self.u_temp = self.u
     @staticmethod
     def from_system(system,timer = Timer(),x = None,u = None):
         return DynamicSystem(system.A,system.B,system.C,system.D,timer,x,u)
@@ -32,10 +34,14 @@ class DynamicSystem(BaseBlock):
     @u.setter
     def u(self,u):
         self.set_u(u)
-        self.u #update self.u_temp
+        self.u_temp = self.u #update self.u_temp
     def init(self,x):
         self._x = x
+        self.init_state = x
         self.timer.init()
+    # reset system state for last init() state
+    def reset(self):
+        self.init(self.init_state)
     def __iter__(self):
         # while True:
         #     yield self.update(self.u)
@@ -65,12 +71,14 @@ class DynamicSystem(BaseBlock):
     @property
     def y(self):
         return self._C@self.x + self._D@self.u_temp
-    def update(self,u):
+    # update x and u(to u_temp),if u is None,use self.u
+    def update(self,u = None):
         try:
-            u = u.__getattribute__("y")
+            u.__getattribute__("y")
         except AttributeError:
             pass
-        self.u = u
+        if u is not None:
+            self.u = u
         return self.update_self()
     # update using self.u
     def update_self(self):
@@ -128,7 +136,7 @@ class DiscreteDynamicSystem():
             if self._k>=self.k_stop:
                 break
         
-class Variable():
+class Variable(BaseBlock):
     '''
     function warpper for varible
         y = fn(t,*fcn_args,**kwards)
@@ -180,7 +188,6 @@ class Variable():
             ret =  self.fcn(self.t,*self.fcn_args,**self.fcn_kwards)
         else:
             ret =  self.fcn(self.t,**self.fcn_kwards)
-        self.update()
         return ret
 class TimerVariable(Variable):
     '''
@@ -192,7 +199,8 @@ class TimerVariable(Variable):
         self.timer = timer
         super().__init__(timer.t,timer.step,timer.stop,fn,**kwards)
     def update(self):
-        self.timer.update()
+        #just return self.y do not change timer
+        return self.y
     # do not update by itself
     @property
     def t(self):
