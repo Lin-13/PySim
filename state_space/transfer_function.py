@@ -1,6 +1,6 @@
 import numpy as np
 from .base import BaseBlock,InputWarpper,Timer
-from .simulator import DynamicSystem
+from .state_space import DynamicSystem
 def to_tuple(x):
     if isinstance(x,np.ndarray):
         return tuple(x.reshape(-1).tolist())
