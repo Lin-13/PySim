@@ -1,6 +1,6 @@
 import numpy as np
 from .base import BaseBlock,InputWarpper,Timer
-from .state_space import DynamicSystem
+from .state_space import StateSpace
 def to_tuple(x):
     if isinstance(x,np.ndarray):
         return tuple(x.reshape(-1).tolist())
@@ -27,7 +27,7 @@ def get_state_matrix(num:tuple,den:tuple):
     C[0,0] = 1
     D = np.zeros((1,m+1))
     return (A,B,C,D)
-class Transfer(DynamicSystem):
+class Transfer(StateSpace):
     '''
     Transfer Function:\n
     Y(s)    = [num]/[den]*U(s)\n
@@ -35,7 +35,7 @@ class Transfer(DynamicSystem):
             = ------------------------------------------- * U(s)
                 (a_n*s**n+a_(n-1)*s**(n-1) + ... +a_0)
     
-    work as State-Space Eq as .simulator.DynamicSystem
+    work as State-Space Eq as .state_space.StateSpace
         X_dot = A*X + B*u\n
         y = C*X + D*u\n
         get Matrix by function get_state_matrix(num,den) in __init__\n

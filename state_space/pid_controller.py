@@ -12,6 +12,9 @@ class PIDController(BaseBlock):
     def init(self):
         self._x,self._xd,self._xi = 0,0,0
         self.timer.init()
+    def reset(self):
+        self.init()
+        return super().reset()
     @property
     def u(self):
         return self._u.y

@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .base import InputWarpper,BaseBlock,Timer
 
-class DynamicSystem(BaseBlock):
+class StateSpace(BaseBlock):
     '''
     x_dot = A * x + B * u
     y = C * x + D * u
@@ -15,14 +15,14 @@ class DynamicSystem(BaseBlock):
         self._D = D
         self._x = x
         self.timer = timer
-        self._u = InputWarpper(u)
+        self._u = InputWarpper(0) if u is None else InputWarpper(u)
         self.init_state = x
         #Save state of u,used to self.y
         #Once self.u is get ,update it
         self.u_temp = self.u
     @staticmethod
     def from_system(system,timer = Timer(),x = None,u = None):
-        return DynamicSystem(system.A,system.B,system.C,system.D,timer,x,u)
+        return StateSpace(system.A,system.B,system.C,system.D,timer,x,u)
     @property
     def u(self):
         # print("U")
@@ -101,18 +101,18 @@ class DynamicSystem(BaseBlock):
         self._u = InputWarpper(u)
     
 
-class DiscreteDynamicSystem():
+class DiscreteStateSpace():
     '''
         x_k = A_k * x_k-1 + u_k
         z_k = C_k * x_k
     '''
     @staticmethod
-    def from_continous(system:DynamicSystem,x0):
+    def from_continous(system:StateSpace,x0):
         system.init(x0)
         A = (np.eye(*system._A.shape)+system._A*system.Ts+1/2*system._A@system._A*system.Ts**2)
         B = system._B*system.Ts
         x0 = system.x
-        return DiscreteDynamicSystem(x0,A,system._C,B,system._D)
+        return DiscreteStateSpace(x0,A,system._C,B,system._D)
     def __init__(self,x0,A0,C0,B0 = None,D0 = None):
         self._A = A0
         self._C = C0
