@@ -81,8 +81,11 @@ class SystemGraph(BaseBlock):
         ((0,2),1,(1,-1)) means s2.u = Concat([s0,s2],(1,-1))\n
     """
 
-    def __init__(self, systems: list[BaseBlock], output, connections: tuple, timer=Timer()):
+    def __init__(self, systems: list, output, connections: tuple, timer=Timer()):
         super().__init__()
+        for block in systems:
+            if not isinstance(block,BaseBlock):
+                raise TypeError("SystemGragh init function arg 'systems' must be BaseBlock")
         self.systems = systems
         self.timer = timer
         self.connections = connections
